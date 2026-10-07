@@ -2,6 +2,8 @@
 ## P2 - Modelo entidad/relación. Viveros
 ### 1. Imagen del modelo entidad/relación del escenario descrito
 
+![alt text](image.png)
+
 ### 2. Descripción de cada una de las entidades definidas.
 - **Vivero** - Representa cada establecimiento de la empresa.
 - **Zona** - Representa una zona específica dentro de un vivero.
@@ -12,8 +14,13 @@
 - **Puesto** - Tipo de puesto que puede desempeñar un empleado.
 - **Destino** - Histórico de donde trabaja un empleado y con que puesto.
 
+- **Productividad_zona** - Registra indicadores de productividad de una zona a lo largo del tiempo.
+- **Productividad_empleado** - Registra indicadores de productividad de un empleado a lo largo del tiempo.
+
+- **Cliente** - Representa a un cliente de Tajinaste S.A.
 - **ClientePlus** - Representa un cliente del programa de fidelizacioón
-- **Venta** - Representa una compra de un cliente de la fidelización Tajinaste Plus.
+- **Pedido** - Representa una compra de un cliente de la fidelización Tajinaste Plus.
+- **Linea_pedido** - Representa cada producto incluido en un pedido.
 - **Bonificación** - Representa la bonificación asignada a un cliente Plus para un mes.
 
 ### 3. Descripción y ejemplos ilustrativos del dominio de cada uno de los atributos de las entidades y de las relaciones.
@@ -41,7 +48,7 @@
 - id_empleado → Identificador entero positivo **PRIMARY KEY**
 - nombre → Texto
 - apellidos → Texto
-- fecha_entrada → Fecha de incorporación
+- fecha_alta → Fecha de incorporación
 #### PUESTO
 - id_puesto → Identificador entero positivo **PRIMARY KEY**
 - nombre → Texto
@@ -52,17 +59,35 @@
 - id_empleado → Empleado destinado **FOREIGN KEY**
 - id_zona → Zona de destino **FOREIGN KEY**
 - id_puesto → Puesto que se va a desempeñar **FOREIGN KEY**
-#### CLIENTEPLUS
+#### PRODUCTIVIDAD_ZONA
+- id_productividad → Identificador para medir la productividad **PRIMARY KEY**
+- periodo_inicio → Fecha de inicio para medir
+- periodo_fin → Fecha de fin de la medición
+- valor → Número entero
+- id_zona → Zona medida **FOREIGN KEY**
+#### PRODUCTIVIDAD_EMPLEADO
+- id_productividad → Identificador para medir la productividad **PRIMARY KEY**
+- periodo_inicio → Fecha de inicio para medir
+- periodo_fin → Fecha de fin de la medición
+- valor → Número entero
+- id_empleado → Empleado al que evaluamos su productividad **FOREIGN KEY**
+#### CLIENTE
 - id_cliente → Identificador entero positivo **PRIMARY KEY**
 - nombre → Texto
+#### CLIENTEPLUS
+- id_membresia → Identificador entero positivo **PRIMARY KEY**
 - fecha_ingreso → Fecha de incorporación
 - fecha_baja → Fecha de finalización
-#### VENTA
-- id_venta → Identificador entero positivo **PRIMARY KEY**
-- fecha → Fecha en la que se realiza la venta
-- precio → Número decimal no negativo con dos decimales
-- id_cliente → Cliente Plus que realiza la venta **FOREIGN KEY**
-- id_empleado → Empleado que tramita la venta **FOREIGN KEY**
+#### PEDIDO
+- id_pedido → Identificador entero positivo **PRIMARY KEY**
+- fecha → Fecha en la que se realiza el pedido
+- id_cliente → Cliente Plus que realiza el pedido **FOREIGN KEY**
+- id_empleado → Empleado que tramita el pedido **FOREIGN KEY**
+#### LINEA_PEDIDO
+- id_pedido → Identificador entero positivo **PRIMARY KEY** **FOREIGN KEY**
+- id_producto → Identificador entero positivo **PRIMARY KEY** **FOREIGN KEY**
+- cantidad → Cantidad solicitada, número entero mayor que 0
+- precio_unitario → precio del producto en ese pedido
 #### BONIFICACIÓN
 - id_bonificacion → Identificador entero positivo **PRIMARY KEY**
 - mes → Texto
@@ -97,35 +122,63 @@ PUESTO — DESTINO
 - Cada DESTINO tiene 1 puesto.
 - Ejemplo: Vendedor puede ser desempeñado por muchos empleados y en distintos periodos.
 
-CLIENTEPLUS — VENTA
-- Un cliente puede realizar 0-N ventas.
+ZONA — PRODUCTIVIDAD_ZONA
+- Una zona puede tener 0..N mediciones de productividad.
+- Cada medición corresponde a 1 zona.
+- La existencia de periodo permite comparar la productividad a lo largo del tiempo.
+
+EMPLEADO — PRODUCTIVIDAD_EMPLEADO
+- Un empleado puede tener 0..N mediciones.
+- Cada medición corresponde a 1 empleado.
+- Ejemplo: ventas gestionadas por empleado durante cada mes.
+
+CLIENTE - CLIENTEPLUS
+- Un cliente puede no pertenecer al programa o pertenecer a él: 0..1.
+- Cada registro de TAJINASTE_PLUS corresponde a 1 cliente.
+- Se almacenan las fechas de ingreso y, si existe, de baja.
+
+CLIENTE — PEDIDO
+- Un cliente puede realizar 0..N pedidos.
 - Cada pedido pertenece a 1 y solo 1 cliente.
 
-EMPLEADO — VENTA
-- Un empleado puede gestionar 0-N ventas.
+EMPLEADO — PEDIDO
+- Un empleado puede gestionar 0..N pedidos.
 - Cada pedido tiene exactamente 1 empleado responsable.
 - No se permite que un pedido tenga dos responsables.
 
+PEDIDO — LINEA_PEDIDO
+- Un pedido tiene 1..N líneas.
+- Cada línea pertenece a 1 pedido.
+- Un pedido de dos productos tendrá dos líneas.
+
+PRODUCTO — LINEA_PEDIDO
+- Un producto puede aparecer en 0..N líneas de pedido.
+- Cada línea se refiere a 1 producto.
+
 CLIENTEPLUS — BONIFICACION
-- Un miembro Plus puede tener 0-N bonificaciones mensuales.
+- Un miembro Plus puede tener 0..N bonificaciones.
 - Cada bonificación pertenece a 1 miembro Plus.
-- Debe existir como máximo una bonificación para cada combinación (cliente, año, mes).
+- Debe existir como máximo una bonificación para cada combinación (cliente, mes).
 
 ### 5 . Restricciones semánticas propuestas.
-- No solapamiento de destinos: un empleado no puede tener dos destinos cuyos intervalos de fechas se solapen, nunca tiene dos destinos simultáneamente.
+- No solapamiento de destinos: un empleado no puede tener dos destinos cuyas fechas se solapen. Esto implementa la condición de que nunca tiene dos destinos a la vez.  
 
 - Destino siempre en una zona: todo destino debe indicar exactamente una zona. No se permite asignar un empleado solamente al vivero sin especificar zona.
 
-- Coherencia vivero-zona: una zona pertenece a un único vivero. Por ello no es necesario guardar también id_vivero en DESTINO; se obtiene a través de ZONA.
+- Coherencia vivero-zona: una zona pertenece a un único vivero.
 
-- Fechas de destino válidas: fecha_inicio < fecha_fin cuando exista fecha_fin. Una fecha de fin NULL representa un destino activo.
+- Fechas de destino válidas: fecha_inicio < fecha_fin cuando exista fecha_fin. Una fecha de fin NULL representa un destino actual
 
 - Stock no negativo: cantidad_disponible >= 0.
 
-- No puede existir más de un registro para la misma pareja (zona, producto).
+- Unicidad del stock: no puede existir más de un registro para la misma (zona, producto).
 
-- Venta con responsable único: id_empleado de VENTA es obligatorio y cada pedido tiene exactamente un responsable.
+- Pedido con responsable único: id_empleado de PEDIDO es obligatorio y cada pedido tiene un responsable.
 
-- Bonificación mensual única: un cliente Plus no puede tener dos registros de bonificación para el mismo año y mes. Restricción de unicidad: (id_cliente, anio, mes).
+- Bonificación mensual única: un cliente Plus no puede tener dos registros de bonificación para el mes. Restricción de: (id_cliente, mes).
 
-- Coherencia de la bonificación: volumen_compra debería calcularse a partir de los pedidos del cliente durante ese mes, y importe_bonificacion según las reglas vigentes del programa.
+- Coherencia de la bonificación: volumen_compra debería calcularse a partir de los pedidos del cliente durante ese mes, y importe_bonificacion según las reglas del programa.
+
+- Líneas válidas: cantidad > 0 y precio_unitario >= 0.
+
+- Periodo de productividad válido: periodo_inicio < periodo_fin. No debería haber dos mediciones duplicadas para el mismo objeto, indicador y periodo.
